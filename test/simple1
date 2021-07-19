@@ -1,0 +1,13 @@
+[Settings]
+A=A
+ControlA=Control+A
+ControlShiftA=Control+Shift+A
+ControlShiftAltA=Control+Shift+Alt+A
+
+ShiftA=Shift+A
+ShiftAltA=Shift+Alt+A
+
+AltA=Alt+A
+
+ABC=A,B,C
+ControlAShiftB=Control+A,Shift+B
