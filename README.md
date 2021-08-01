@@ -5,4 +5,11 @@ Remap an existing SC2Hotkeys file with a given substitution map.
 - `bash setup.sh`
 - `cp Keymaps/same Keymaps/my-custom-map`
 - `vim Keymaps/my-custom-map`
-- `./mk_keymap.py -k Keymaps/my-custom-map SC2Hotkeys/TheCore6g_right_UK_qwerty.SC2Hotkeys >SC2Hotkeys/myawesomesetup.SC2Hotkeys`
+- `./mk_keymap.py -k Keymaps/core6g_US_right-to-xbows SC2Hotkeys/TheCore6g_right_US_qwerty.SC2Hotkeys SC2Hotkeys/core6g_xbows.SC2Hotkeys`
+
+## Adding Direct Overrides
+- `grep '^\[\|BuildAdvanced' SC2Hotkeys/core6g_xbows >override`
+- Make custom changes to override file
+  - `vim override`
+- `./mk keymap.py -k Keymaps/core6g_US_right-to-xbows -o override SC2Hotkeys/TheCore6g_right_US_qwerty.SC2Hotkeys
+  >SC2Hotkeys/core6g_xbows.SC2Hotkeys`

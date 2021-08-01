@@ -34,19 +34,23 @@ def get_args():
         parser = argparse.ArgumentParser( description=desc )
         parser.add_argument( '--debug', '-d', action='store_true' )
         parser.add_argument( '--verbose', '-v', action='store_true' )
-        parser.add_argument( '-k', '--keymap',
+        parser.add_argument( '-k', '--keymap_file',
             help='''Keycap replacement map, in INI format.
                 Mapping key-value pairs must be in section 'KEYMAP'.'''
                 )
+        parser.add_argument( '-o', '--overrides_file',
+            help='''Direct assignments. Added last, will override anything
+                previously set.'''
+                )
         parser.add_argument( 'hotkey_file',
-            help='Original SC2 keymap file'
+            help='Original SC2 hotkeys file'
             )
-        # Sane defaults
-        defaults = {
-            'hotkey_file': 'SC2Hotkeys/TheCore6g_right_US_qwerty.SC2Hotkeys',
-            'keymap': 'test/rekey_map1',
-        }
-        parser.set_defaults( **defaults )
+        # # Sane defaults
+        # defaults = {
+        #     'hotkey_file': 'SC2Hotkeys/TheCore6g_right_US_qwerty.SC2Hotkeys',
+        #     'keymap': 'test/rekey_map1',
+        # }
+        # parser.set_defaults( **defaults )
         args = parser.parse_args()
         resources['args'] = args
         # Post processing
@@ -62,10 +66,19 @@ def get_rekey_map():
         args = get_args()
         cfg = configparser.ConfigParser( interpolation=None )
         cfg.optionxform = lambda option: option #retain original key case
-        cfg.read( pathlib.Path( args.keymap ) )
+        cfg.read( pathlib.Path( args.keymap_file ) )
         rekey_map = { k: v for k,v in cfg.items( 'KEYMAP' ) }
         resources['rekey_map'] = rekey_map
     return resources['rekey_map']
+
+def get_override_cfg():
+    if 'override_cfg' not in resources:
+        args = get_args()
+        cfg = configparser.ConfigParser( interpolation=None )
+        cfg.optionxform = lambda option: option #retain original key case
+        cfg.read( pathlib.Path( args.overrides_file ) )
+        resources['override_cfg'] = cfg
+    return resources['override_cfg']
 
 
 def parse_hotkeys( hotkey_file ):
@@ -98,19 +111,37 @@ def remap_keys( cfg ):
     return new_cfg
 
 
+def add_overrides( cfg ):
+    override_cfg = get_override_cfg()
+    for section in override_cfg.sections():
+        logger.debug( f"OVERRIDE: processing section '{section}'" )
+        for command, value in override_cfg.items( section ):
+            if logger.isEnabledFor( logging.DEBUG ):
+                oldsetting = cfg.get( section, command )
+                logger.debug( f"OVERRIDE: '{command}' =  '{oldsetting}' -> '{value}" )
+            cfg.set( section, command, value )
+
+
 def run():
     args = get_args()
+    logger.debug( [ 'ARGS', pprint.pformat( args ) ] )
     hk1 = parse_hotkeys( pathlib.Path( args.hotkey_file ) )
-    logger.info( f"ORIGINAL" )
-    if logger.isEnabledFor( logging.INFO ):
-        hk1.write( sys.stdout, space_around_delimiters=False )
-        print( f"--------" )
-    hk2 = remap_keys( hk1 )
-    logger.info( f"NEW" )
-    hk2.write( sys.stdout, space_around_delimiters=False )
-    if logger.isEnabledFor( logging.INFO ):
-        print( f"---" )
 
+    # REKEY
+    hk2 = hk1
+    if args.keymap_file :
+        hk2 = remap_keys( hk1 )
+        if logger.isEnabledFor( logging.INFO ):
+            logger.info( f"AFTER REKEY" )
+            print( f"---" )
+
+    # OVERRIDE
+    if args.overrides_file :
+        add_overrides( hk2 )
+
+    # PRINT FINAL CONFIG
+    hk2.write( sys.stdout, space_around_delimiters=False )
+    
 
 if __name__ == '__main__':
     run()

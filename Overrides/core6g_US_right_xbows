@@ -1,0 +1,10 @@
+[Settings]
+[Hotkeys]
+[Commands]
+ProtossBuildAdvanced/Harvester=Q
+ProtossBuildAdvanced/Probe=Q
+TerranBuildAdvanced=Q
+TerranBuildAdvanced/HHSCV=Q
+TerranBuildAdvanced/SCV=Q
+TerranBuildAdvanced/SISCV=Q
+ZergBuildAdvanced/Drone=Q

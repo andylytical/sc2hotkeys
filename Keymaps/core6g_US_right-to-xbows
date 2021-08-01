@@ -6,9 +6,11 @@
 8:2
 9:3
 Apostrophe:G
+BackSlash:Enter
 BracketClose:V
 BracketOpen:T
 Comma:X
+Enter:BackSlash
 Equals:B
 H:CapsLock
 I:W
@@ -54,9 +56,7 @@ Z:M
 # All the same below here
 Alt:Alt
 BackMouseButton:BackMouseButton
-BackSlash:BackSlash
 Backspace:Backspace
-Enter:Enter
 Escape:Escape
 F10:F10
 F1:F1
