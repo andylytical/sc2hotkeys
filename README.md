@@ -25,3 +25,6 @@ Print the new hotkey setup.
 ## Keymap and Overrides can be applied together
 If both `-k` and `-o` are provided, keymap is applied first, then overrides are applied second. 
 - `./mk_keymap.py -k Keymaps/core6g_US_right-to-xbows -o override SC2Hotkeys/TheCore6g_right_US_qwerty.SC2Hotkeys >SC2Hotkeys/core6g_xbows.SC2Hotkeys`
+
+# References
+- https://gist.github.com/pedz/3ab6b1aa7fb4f41b354a7a82f5ba522b
