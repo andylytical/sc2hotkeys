@@ -25,21 +25,6 @@ debug() {
 }
 
 
-set_install_dir() {
-  [[ $DEBUG -eq $YES ]] && set -x
-  INSTALL_DIR=$HOME/sc2hotkeys
-  [[ -n "$SC2HOTKEYS" ]] && INSTALL_DIR="$SC2HOTKEYS"
-
-  [[ -z "$INSTALL_DIR" ]] \
-  && croak "Unable to determine install base. Try setting 'PUP_ENC_DIR' env var."
-
-  [[ -d "$INSTALL_DIR" ]] || mkdir -p $INSTALL_DIR
-
-  [[ -d "$INSTALL_DIR" ]] \
-  || croak "Unable to find or create script dir: '$INSTALL_DIR'"
-}
-
-
 ensure_python() {
   [[ $DEBUG -eq $YES ]] && set -x
   PYTHON=$(which python3) 2>/dev/null
@@ -54,7 +39,7 @@ ensure_python() {
 
 setup_python_venv() {
   [[ $DEBUG -eq $YES ]] && set -x
-  venvdir="$INSTALL_DIR/.venv"
+  venvdir="./.venv"
   [[ -d "$venvdir" ]] || {
     "$PYTHON" -m venv "$venvdir"
     PIP="$venvdir/bin/pip"
@@ -66,38 +51,11 @@ setup_python_venv() {
 }
 
 
-# set_shebang_path() {
-#   [[ $DEBUG -eq $YES ]] && set -x
-#   newpath="$1"
-#   shift
-#   sed -i -e "1 c \#\!$newpath" "$@"
-# }
-
-
-# install_scripts() {
-#   [[ $DEBUG -eq $YES ]] && set -x
-
-#   # Install admin.py, backup existing if it differs
-#   set_shebang_path "$V_PYTHON" "$BASE/admin.py"
-#   install -vbC --suffix="$TS" -t "$INSTALL_DIR" "$BASE/admin.py"
-
-#   # Install config files only if they don't already exist
-#   for fn in tables.yaml config.ini; do
-#       [[ -f "$INSTALL_DIR/$fn" ]] || cp "$BASE/$fn" "$INSTALL_DIR"
-#   done
-# }
-
-
 [[ $DEBUG -eq $YES ]] && set -x
 BASE=$(readlink -e $( dirname $0 ) )
 TS=$(date +%s)
-
-set_install_dir
-log "Installing into: '$INSTALL_DIR'"
 
 ensure_python
 debug "Got PYTHON: '$PYTHON'"
 
 setup_python_venv
-
-# install_scripts
