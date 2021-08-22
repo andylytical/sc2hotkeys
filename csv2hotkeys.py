@@ -11,9 +11,11 @@ logger.addHandler( l_handler )
 
 # Python standard library imports
 import argparse
+import configparser
 import csv
 import pathlib
 import pprint
+import sys
 
 # pretty printer config
 pp = pprint.PrettyPrinter( sort_dicts=False )
@@ -31,16 +33,19 @@ def get_args():
         parser = argparse.ArgumentParser( description=desc )
         parser.add_argument( '--debug', '-d', action='store_true' )
         parser.add_argument( '--verbose', '-v', action='store_true' )
-        parser.add_argument( '-C', '--commandcodes',
+        parser.add_argument( '--outfile', '-o',
+            help='Write hotkey config to output file. Default=stdout.'
+            )
+        parser.add_argument( '--commandcodes', '-C',
             help='CSV file mapping Units+Actions to CommandCodes.'
             )
-        parser.add_argument( '-c', '--commands',
+        parser.add_argument( '--commands', '-c',
             help='CSV file mapping Units+Actions to individual keycap letters.'
             )
-        parser.add_argument( '-K', '--hotkeycodes',
+        parser.add_argument( '--hotkeycodes', '-K',
             help='CSV file mapping Units+Actions to CommandCodes.'
             )
-        parser.add_argument( '-k', '--hotkeys',
+        parser.add_argument( '--hotkeys', '-k',
             help='''
                 CSV file mapping Camera and ControlGroup actions
                 to keycap letter plus modifier.
@@ -55,6 +60,19 @@ def get_args():
             logger.setLevel( logging.DEBUG )
     return resources[ 'args' ]
 
+
+def get_hotkey_config():
+    if 'hotkey_config' not in resources:
+        cfg = configparser.ConfigParser(
+            interpolation=None,
+            delimiters=('='),
+            allow_no_value=True
+            )
+        cfg.optionxform = lambda option: option #retain original key case
+        for title in ( 'Settings', 'Hotkeys', 'Commands' ):
+            cfg.add_section( title )
+        resources['hotkey_config'] = cfg
+    return resources['hotkey_config']
 
 def get_command_codes():
     if 'command_codes' not in resources:
@@ -71,10 +89,9 @@ def get_hotkey_codes():
         args = get_args()
         f = pathlib.Path( args.hotkeycodes )
         code_map = parse_code_map( f )
-        # code_map is a two-layer hash, but hotkey codes doesn't use Unit,
-        # so the entire hash is embedded in key <empty-string>
-        resources['hotkey_codes'] = code_map['']
+        resources['hotkey_codes'] = code_map
     return resources['hotkey_codes']
+
 
 def parse_code_map( fn ):
     ''' Create map of [Unit][Command] -> Command Code/Unit Code
@@ -146,6 +163,9 @@ def get_commands( code_map ):
 def get_hotkeys( code_map ):
     '''Parse csv (from spreadsheet) of ControlGroups and Cameras
     '''
+    # code_map is a two-layer hash, but hotkey codes doesn't use Unit,
+    # so the entire hash is embedded in key <empty-string>
+    codemap = code_map['']
     args = get_args()
     f = pathlib.Path( args.hotkeys )
     hotkeys = {}
@@ -164,32 +184,62 @@ def get_hotkeys( code_map ):
                 if mod == 'None':
                     new_combo = f'{keycap}'
                 else:
-                    new_combo = '+'.join( [ mod, keycap ] )
+                    _parts = [ mod ]
+                    if len(keycap) > 0:
+                        _parts.append( keycap )
+                    new_combo = '+'.join( _parts )
                 logger.debug( f"{csvreader.line_num} ACTION '{action}' COMBO '{new_combo}'" )
-                cmd = code_map[ action ]
+                cmd = codemap[ action ]
                 hotkeys.setdefault( cmd, [] ).append( new_combo )
     return hotkeys
 
 
-def print_keymap( keymap, title=None ):
-    if title:
-        print( f'[{title}]')
-    else:
-        raise UserWarning( 'print_hotkey_commands: missing title' )
-    # for k,v in keymap.items():
+# def print_keymap( keymap, title=None ):
+#     if title:
+#         print( f'[{title}]')
+#     else:
+#         raise UserWarning( 'print_hotkey_commands: missing title' )
+#     # for k,v in keymap.items():
+#     for k in sorted( keymap.keys() ):
+#         combostrings = ','.join( set( keymap[k] ) ) # set will ensure no duplicates
+#         print( f'{k}={combostrings}' )
+#     print()
+
+
+# def print_settings():
+#     settings = { 'AllowSetConflicts': '1' }
+#     print_keymap( settings, title='Settings' )
+
+
+def update_hotkey_config( section_name, keymap, codemap={} ):
+    cfg = get_hotkey_config()
+    # add all posible cmd_codes, in sorted order, default to empty string
+    hk_codes = []
+    for data in codemap.values():
+        hk_codes.extend( data.values() )
+    for hk in sorted( hk_codes ):
+        cfg.set( section_name, hk, '' )
+    # overwrite the ones that have defined keys
     for k in sorted( keymap.keys() ):
-        combostrings = ','.join( set( keymap[k] ) ) # set will ensure no duplicates
-        print( f'{k}={combostrings}' )
-    print()
+        key_combo = ','.join( sorted( set( keymap[k] ) ) )
+        cfg.set( section_name, k, key_combo )
 
 
-def print_settings():
-    settings = { 'AllowSetConflicts': '1' }
-    print_keymap( settings, title='Settings' )
+def print_cfg():
+    cfg = get_hotkey_config()
+    args = get_args()
+    if args.outfile:
+        f = pathlib.Path( args.outfile )
+        with f.open( mode='w' ) as fh:
+            cfg.write( fh, space_around_delimiters=False )
+    else:
+        cfg.write( sys.stdout, space_around_delimiters=False )
+
 
 
 def dumpvar( var, title='UNKNOWN' ):
     logger.debug( '%s\n%s', title, pp.pformat( var ) )
+
 
 def run():
     args = get_args()
@@ -197,22 +247,26 @@ def run():
     logger.debug( pp.pformat( args ) )
 
     # Settings
-    print_settings()
-
-    # Commands - Units and Buildings
-    codemap = get_command_codes()
-    dumpvar( codemap, 'COMMAND CODES' )
-    commandmap = get_commands( codemap )
-    dumpvar( commandmap, 'COMMANDS' )
-    print_keymap( commandmap, title='Commands' )
+    settings = { 'AllowSetConflicts': '1' }
+    update_hotkey_config( 'Settings', settings )
 
     # Hotkeys - Cameras and Control Groups
     codemap = get_hotkey_codes()
     dumpvar( codemap, 'HOTKEY CODES' )
     hotkeymap = get_hotkeys( codemap )
     dumpvar( hotkeymap, 'HOTKEYS' )
-    print_keymap( hotkeymap, title='Hotkeys' )
+    # print_keymap( hotkeymap, title='Hotkeys' )
+    update_hotkey_config( 'Hotkeys', hotkeymap, codemap )
 
+    # Commands - Units and Buildings
+    codemap = get_command_codes()
+    dumpvar( codemap, 'COMMAND CODES' )
+    commandmap = get_commands( codemap )
+    dumpvar( commandmap, 'COMMANDS' )
+    # print_keymap( commandmap, title='Commands' )
+    update_hotkey_config( 'Commands', commandmap, codemap )
+
+    print_cfg()
 
 if __name__ == '__main__':
     run()

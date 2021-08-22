@@ -1,5 +1,6 @@
 # Custom
 *.csv
+*.SC2Hotkeys
 err
 out
 output

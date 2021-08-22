@@ -33,7 +33,7 @@ ensure_python() {
   PYTHON=$( realpath -e "$PYTHON" )
   [[ -x "$PYTHON" ]] || croak "Found Python3 at '$PYTHON' but it's not executable."
   "$PYTHON" "$BASE/require_py_v3.py" || croak "Python version too low"
-  "$PYTHON" -m ensurepip
+  "$PYTHON" -m ensurepip || croak "Something broke during ensurepip."
 }
 
 
@@ -53,9 +53,8 @@ setup_python_venv() {
 
 [[ $DEBUG -eq $YES ]] && set -x
 BASE=$(readlink -e $( dirname $0 ) )
-TS=$(date +%s)
 
 ensure_python
-debug "Got PYTHON: '$PYTHON'"
+log "Got PYTHON: '$PYTHON'"
 
 setup_python_venv
